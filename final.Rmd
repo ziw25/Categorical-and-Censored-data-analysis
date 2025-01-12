@@ -1,0 +1,185 @@
+---
+title: "Final"
+author: "Ziwen Zhang"
+date: "2022-12-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+load("clinical_trial.RData")
+load("staph.rda")
+
+library(SciViews)
+```
+
+# Q1A
+```{r}
+data <- matrix(c(23, 13, 5, 7), nrow = 2)
+data
+
+diffProp <- data[1,1]/(data[1,1] + data[1,2]) - data[2,1]/(data[2,1] + data[2,2])
+
+  pi1 <- data[1,1]/(data[1,1] + data[1,2])
+  pi2 <- data[2,1]/(data[2,1] + data[2,2])
+  low_DP <- diffProp - 1.96 * sqrt((pi1*(1-pi1))/(data[1,1]+data[1,2]) + (pi2*(1-pi2))/(data[2,1]+data[2,2]))
+  upp_DP <- diffProp + 1.96 * sqrt((pi1*(1-pi1))/(data[1,1]+data[1,2]) + (pi2*(1-pi2))/(data[2,1]+data[2,2]))
+  
+paste("95% Wald confidence interval for the difference in probabilities of success conditioning on the strategy is from ", round(low_DP,3), "to", round(upp_DP,3))
+```
+
+Interpret: We have 95% confidence to conclude that probabilities of success conditioning on the strategy differ from -8.1% to 42.4%. Since this interval includes 0, it is hard to conclude that which strategy is better.
+
+# Q1B
+```{r}
+  relative_risk1 <- data[1,1]/(data[1,1] + data[1,2])
+  relative_risk2 <- data[2,1]/(data[2,1] + data[2,2])
+  relative_risk_ratio <- relative_risk1 / relative_risk2
+  
+  low_RR <- exp((ln(relative_risk_ratio) - 1.96 * sqrt(1/data[1,1] + 1/data[2,1] - 1/(data[1,1] + data[1,2]) - 1/(data[2,1] + data[2,2]))))
+  upp_RR <- exp((ln(relative_risk_ratio) + 1.96 * sqrt(1/data[1,1] + 1/data[2,1] - 1/(data[1,1] + data[1,2]) - 1/(data[2,1] + data[2,2]))))
+  
+paste("relative risk ratio: ", round(relative_risk_ratio,3), "95% CI for relative risk ratio is from ", round(low_RR,3), "to", round(upp_RR,3))
+```
+
+Interpret: Since 95% CI includes 1, there is no significant difference in probabilities of success conditioning on the strategy. 
+
+# Q1C
+```{r}
+  odds1 <- data[1,1] / data[1,2]
+  odds2 <- data[2,1] / data[2,2]
+  odds_ratio <- odds1 / odds2
+  
+  low_OR <- exp((ln(odds_ratio) - 1.96 * sqrt(1/data[1,1] + 1/data[1,2] + 1/data[2,1] + 1/data[2,2])))
+  upp_OR <- exp((ln(odds_ratio) + 1.96 * sqrt(1/data[1,1] + 1/data[1,2] + 1/data[2,1] + 1/data[2,2])))
+  
+paste("odds ratio: ", round(odds_ratio,3), "95% CI for odds ratio is from ", round(low_OR,3), "to", round(upp_OR,3))
+```
+
+Interpret: Since 95% CI includes 1, there is no significant difference in probabilities of success conditioning on the strategy. 
+
+# Q1D
+There is no sufficient evidence to conclude that calling time-out is a good strategy. 
+
+Firstly, the 95% Wald confidence interval includes 0 and ranges from a negative value to a positive value, indicating that there is no significant difference on probability of success between two strategies.
+
+Secondly, even though the odds ration and relative risk are larger than 1, the 95% CI for the both include 1, indicating that there is no significant difference in probabilities of success conditioning on the strategy.
+
+
+# Q2A
+```{r}
+library(survminer)
+library(tidyverse)
+library(survival)
+library(KMsurv)
+
+KM_est = survfit(Surv(time, status) ~ rx, type = "kaplan-meier", conf.type ="log", data = clinical_trial)
+
+plot(KM_est, main = "KM estimate", xlab = "time", ylab = "Survival estimate")
+ggsurvplot(KM_est, legend = "none") + 
+  xlab( "time") + 
+  ylab("Survival estimate") + 
+  ggtitle("KM estimate")
+  
+
+logrank_test <- survdiff(Surv(time, status) ~ rx, data = clinical_trial)
+logrank_test
+```
+
+Interpret: Since the p-value of the log-rank test is < 0.05, there is an evidence to reject the null hypothesis and thus there is a difference between the populations (control group and novel treatment group) in the probability of death at any time.
+
+# Q2B
+```{r}
+# summary(KM_est)
+
+```
+For control group, S(1000) = 0.529 with 95%CI from 0.2827 to 0.476
+
+For novel treatment group, S(1000) = 0.668 with 95%CI from 0.2721 to 0.617
+
+# Q2C
+```{r}
+library(survival)
+
+coxfit <- coxph(Surv(time, status) ~ rx, data = clinical_trial)
+coxfit
+```
+
+Since the p-value is smaller than 0.05, there is an evidence to reject the null hypothesis and thus the treatment effect is significant.
+
+
+# Q2D
+```{r}
+library(survminer)
+
+ph_fit <- survfit(Surv(time, status) ~ rx, data = clinical_trial)
+
+ggsurvplot(ph_fit, fun = "cloglog", data = clinical_trial) + 
+  labs(title = "Log-log curves by treatment type",
+       y = "log-log survival", 
+       x = "Time to event")
+```
+
+Since the two curves are not parallel according to the log-cumulative hazard plot, the proportional hazard assumption is violated, and thus both of the log-rank test and Cox proportional hazard model are no longer appropriate to test the treatment difference.
+
+# Q2E
+```{r}
+surv_median(KM_est, combine = TRUE)
+```
+The median follow-up time for the trial is time=1236
+
+# Q3A
+H0: There is no difference in the rate of staphylococcus infection between patients whose burns were cared for with a routine bathing care method (trt = 0) versus those whose body cleansing was initially performed using 4% chlorhexidine gluconate (trt = 1)
+
+H1: There is a difference in the rate of staphylococcus infection between patients whose burns were cared for with a routine bathing care method (trt = 0) versus those whose body cleansing was initially performed using 4% chlorhexidine gluconate (trt = 1) 
+
+```{r}
+log_rank <- survdiff(Surv(time, status) ~ trt, data = staph)
+log_rank
+
+prop.test(x = c(28, 20), n = c(70, 84), alternative = "two.sided")
+
+```
+
+Since the p-value is <= 0.05, there is an evidence to reject the null hypothesis and thus there is a difference in the rate of staphylococcus infection between patients whose burns were cared for with a routine bathing care method (trt = 0) versus those whose body cleansing was initially performed using 4% chlorhexidine gluconate (trt = 1).
+
+```{r}
+FH_est = survfit(Surv(time, status) ~ trt, type = "fleming-harrington", data = staph)
+
+# ggsurvplot(FH_est, fun = "cumhaz", data = staph) + 
+  labs(title = "Survival curves",
+       y = "cumulative hazard", 
+       x = "Time")
+
+ggsurvplot(FH_est, legend = "none") + 
+  labs(title = "Survival curves",
+       y = "Survival probability", 
+       x = "Time")
+```
+
+Interpret: the survival curves shows the consistent results with the results obtained from the test, and there is a difference of the survival curve between the two treatment groups.
+
+# Q3B
+```{r}
+library(RISCA)
+library(survRM2)
+
+
+RMSTdiff30 <- rmst2(time = staph$time, status = staph$status, arm = staph$trt, tau = 30, covariates = NULL, alpha = 0.05)
+RMSTdiff30
+
+RMSTdiff60 <- rmst2(time = staph$time, status = staph$status, arm = staph$trt, tau = 60, covariates = NULL, alpha = 0.05)
+RMSTdiff60
+```
+
+Interpret: When tau = 30, RMST for trt=1 is 24.754, RMST for trt=0 is 22.047 and RMSTdiff is 2.707. When tau = 60, RMST for trt=1 is 45.473, RMST for trt=0 is 36.409 and RMSTdiff is 9.064. From this result, we can see that the increase of tau will increase the RMST for both of the arms and the difference between RMST will also increase.
+
+# Q4A
+TRUE
+
+# Q4B
+TRUE
+
+# Q4C
+TRUE
