@@ -1,0 +1,41 @@
+---
+title: "Lab1"
+author: "Ziwen Zhang"
+date: "2022-11-05"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Question 1
+```{r}
+TrueCI <- function(pi){
+  set.seed(123)
+  piest <- rbinom(n = 1000, size = 40, prob = pi)/40
+  lower <- piest - qnorm(0.975) * sqrt(piest*(1-piest)/40)
+  upper <- piest + qnorm(0.975) * sqrt(piest*(1-piest)/40)
+  sum(lower <= pi & upper >= pi) / 1000
+}
+
+pi <- seq(0,1,by=0.01)
+plot(pi, lapply(pi, TrueCI), ylim = c(0,1), ylab="Confidence Level", xlab="pi values", main = "True Confidence Level vs. pi")
+```
+
+When the pi values are close to 0 and 1, the confidence levels become lower, and this trend seems to be significant with the extreme π values. Otherwise, the confidence levels are relatively stable at around 0.95.
+
+## Question 2
+```{r}
+set.seed(123)
+bin_sample = rbinom(n = 1000,
+                    size = 10,
+                    prob = 0.6)
+Pr3 <- sum(bin_sample == 3) / length(bin_sample) 
+Pr3
+```
+
+The estimated probability is 0.046

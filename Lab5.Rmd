@@ -1,0 +1,113 @@
+---
+title: "Lab 5"
+author: "Ziwen Zhang"
+date: "2022-12-08"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1
+Consider data tongue from the package KMsurv. Do a simple graphical check of the proportional hazards assumptions and state your conclusions.
+```{r}
+library(KMsurv)
+library(survival)
+library(survminer)
+data(tongue)
+
+tongue <- tongue %>%
+  mutate(type = ifelse(type == 1, "Aneuploid Tumor", "Diploid Tumor"))
+
+tongue_fit <- survfit(Surv(time, delta) ~ type, data = tongue)
+
+ggsurvplot(tongue_fit, fun = "cloglog", data = tongue) + 
+  labs(title = "Log-log curves by tumor type",
+       y = "log-log survival", 
+       x = "Time to death or on-study time (in weeks)")
+```
+
+The proportional hazards assumption is violated since the log-log survival curves are not parallel.
+
+
+# Question 2
+For this problem we use data kidtran (death times of 863 kidney transplantpatients) from KMsurv package. Patients can be classified by race and sex into four groups.
+
+• Test the hypothesis that there is no difference in survival between the four groups.
+• for each gender group, conduct individual tests of the hypothesis of no racial differences in survival rates.
+
+```{r}
+data("kidtran")
+
+log_rank <- survdiff(Surv(time, delta) ~ race + gender, data = kidtran)
+log_rank
+```
+H0: There is no difference in survival between the four groups.
+H1: There is at least one difference in survival among the four groups.
+
+Since the p-value is 0.2 > 0.05, there is no evidence to reject the null hypothesis and thus there is no difference in survival among the four groups.
+
+```{r}
+library(tidyverse)
+
+# for male (gender=1)
+male <- kidtran %>%
+  filter(gender == 1)
+
+log_rank_male <- survdiff(Surv(time, delta) ~ race, data = male)
+log_rank_male
+
+# for female (gender=2)
+female <- kidtran %>%
+  filter(gender == 2)
+
+log_rank_female <- survdiff(Surv(time, delta) ~ race, data = female)
+log_rank_female
+```
+
+For male group:
+
+H0: There is no difference in survival between the two race groups.
+H1: There is a difference in survival between the two race groups.
+
+Since the p-value is 0.8 > 0.05, there is no evidence to reject the null hypothesis and thus there no difference in survival between the two race groups.
+
+For female group:
+
+H0: There is no difference in survival between the two race groups.
+H1: There is a difference in survival between the two race groups.
+
+Since the p-value is 0.03 < 0.05, there is an evidence to reject the null hypothesis and thus there is a difference in survival between the two race groups.
+
+# Question 3
+For the female subset from the previous problem (kidtran) estimate the difference in RMST for τ = 2500 using package survRM2.
+```{r}
+library(survRM2)
+
+female <- female %>%
+  mutate(race = ifelse(race == 1, 0, 1))
+
+RMSTdiff <- rmst2(time = female$time, status = female$delta, arm = female$race, tau = 2500, covariates = NULL, alpha = 0.05)
+RMSTdiff
+```
+
+The difference in RMST is 216.054
+
+# Question 4
+The cumulative hazard function for the Weibull distribution is given by
+$$
+H(X) = λx^α
+$$
+Derive a simple graphical diagnostic to check whether the Weibull distribution is adequate for data.
+
+Please note that this question is not about specific data set. Your solution should be applicable for any data when you want to use Weibull distribution
+
+Solution:
+Take the logarithm to the left and right of the equation:
+$$
+log(H(x)) = log(λx^α) = log(λ) + log(x^α) = log(λ) + a*log(x)
+$$
+Therefore, we can calculate $$H(x)$$ and plot $$log(H(x))$$ versus $$log(x)$$. If the data can fit in this linear model, the Weibull distribution is adequate for data.

@@ -1,0 +1,94 @@
+---
+title: "Lab3"
+author: "Ziwen Zhang"
+date: "2022-11-17"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SciViews)
+```
+
+# Question 1
+```{r}
+# create a matrix with aspirin values
+aspirin <- matrix(c(189, 104, 10845, 10933), nrow = 2)
+aspirin
+
+# write a function to calculate odds ratio, relative risk ratio and difference of proportions for a 2 x 2 table.
+calculate <- function(data){
+  
+  odds1 <- data[1,1] / data[1,2]
+  odds2 <- data[2,1] / data[2,2]
+  odds_ratio <- odds1 / odds2
+  low_OR <- exp((ln(odds_ratio) - 1.96 * sqrt(1/data[1,1] + 1/data[1,2] + 1/data[2,1] + 1/data[2,2])))
+  upp_OR <- exp((ln(odds_ratio) + 1.96 * sqrt(1/data[1,1] + 1/data[1,2] + 1/data[2,1] + 1/data[2,2])))
+  
+  relative_risk1 <- data[1,1]/(data[1,1] + data[1,2])
+  relative_risk2 <- data[2,1]/(data[2,1] + data[2,2])
+  relative_risk_ratio <- relative_risk1 / relative_risk2
+  low_RR <- exp((ln(relative_risk_ratio) - 1.96 * sqrt(1/data[1,1] + 1/data[2,1] - 1/(data[1,1] + data[1,2]) - 1/(data[2,1] + data[2,2]))))
+  upp_RR <- exp((ln(relative_risk_ratio) + 1.96 * sqrt(1/data[1,1] + 1/data[2,1] - 1/(data[1,1] + data[1,2]) - 1/(data[2,1] + data[2,2]))))
+  
+  diffProp <- data[1,1]/(data[1,1] + data[1,2]) - data[2,1]/(data[2,1] + data[2,2])
+  pi1 <- data[1,1]/(data[1,1] + data[1,2])
+  pi2 <- data[2,1]/(data[2,1] + data[2,2])
+  low_DP <- diffProp - 1.96 * sqrt((pi1*(1-pi1))/(data[1,1]+data[1,2]) + (pi2*(1-pi2))/(data[2,1]+data[2,2]))
+  upp_DP <- diffProp + 1.96 * sqrt((pi1*(1-pi1))/(data[1,1]+data[1,2]) + (pi2*(1-pi2))/(data[2,1]+data[2,2]))
+  
+  paste("95% CI for odds ratio is from ", round(low_OR,3), "to", round(upp_OR,3), "95% CI for relative risk ratio is from ", round(low_RR,3), "to", round(upp_RR,3), "95% CI for difference of proportions is from ", round(low_DP,3), "to", round(upp_DP,3))
+}
+
+# apply the function on aspirin data
+calculate(aspirin)
+```
+Comments: The 95% CI for odds ratio is a little bit greater than that for the risk ratio. This is because the odds ratio overestimates the risk if the disease is common. (when the disease is rare, the odds ratio and relative risk will be similar.)
+
+# Question 2
+```{r}
+party_tab = matrix(c(762, 484, 327, 239, 468, 477), nrow=2)
+
+calculate2 <- function(dt){
+  party_chisq <- chisq.test(dt)
+  obs <- party_chisq$observed
+  exp <- party_chisq$expected
+  Gscore <- 2 * sum(obs * log(obs/exp))
+  pvalue <- pchisq(q = Gscore, df = (nrow(dt)) * (ncol(dt)-1), lower.tail = FALSE)
+  paste("The G2 acore is: ", round(Gscore,3), "and the p-value is: ", signif(pvalue,3))
+}
+
+calculate2(party_tab)
+```
+
+# Question 3
+```{r}
+result <- matrix(c(7, 0, 8, 15), nrow=2)
+dimnames(result) <- list(Predniosolone = c("Treated","Control"), Normalization = c("achieved", "not achieved"))
+result
+fisher.test(result, alternative = "greater")
+```
+Since the p-value is smaller than 0.05, there is an evidence to reject the null hypothesis and thus the results were significantly better for treatment than for control.
+
+# Question 4
+```{r}
+score <- matrix(c(9, 44, 13, 10, 11, 52, 23, 22, 9, 41, 12, 27), ncol = 3)
+dimnames(score) <- list(Aspiration = c("High School","High School Graduation", "Some College", "College Graduation"), Income = c("Low","Middle", "High"))
+score
+
+# using Chi-squard test to test independence of educational aspiration and family income.
+score_chisq <- chisq.test(score)
+score_chisq
+```
+Since the p-value is 0.181, there is no evidence to reject the null hypothesis that educational aspiration and family income are independent.
+
+Deficiency of Chi-square test: 
+The Chi-square treat X and Y as nominal, reordering does not change the chi-square value, but it is not very powerful when testing the ordinal variables. 
+```{r}
+library(DescTools)
+MHChisqTest(score)
+```
+Since the p-value is smaller than 0.05, there is an evidence to reject the null hypothesis that the educational aspirations and family income are independent.

@@ -1,0 +1,88 @@
+---
+title: "Lab4"
+author: "Ziwen Zhang"
+date: "2022-12-01"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1
+```{r}
+library(dplyr)
+survtime <- c(59, 112, 152, 418, 434, 448, 461, 475, 477, 563, 638, 744, 769, 770, 803)
+status <- c(0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1)
+
+df <- data.frame(survtime, status)
+
+prob_died <- c(1/15, 1/14, 0/13, 1/12, 1/11, 0/10, 0/9, 1/8, 0/7, 1/6, 1/5, 0/4, 0/3, 0/2, 0/1)
+
+prob_surv <- 1 - prob_died
+
+cumprod(prob_surv) %>% round(5)
+
+```
+
+# Question 2
+```{r}
+library(survival)
+library(flexsurv)
+library(tidyverse)
+
+# estimate survival curve using exponential distribution
+ex_fit <- flexsurvreg(Surv(time, status) ~ 1, data = cancer, dist = 'exp')
+
+
+plot(ex_fit, main = "KM estimate vs exponential distribution", xlab = "time", ylab = "Survival estimate", conf.int = F)
+legend(x = "topright", legend=c("exponential distribution", "KM estimate"), col=c("red", "black"), lty=1:2, cex=0.8)
+
+```
+When the time is short, the survival estimate from the KM method is slightly higher than that from the exponential distribution. When the time is longer than about 400 days, the survival estimate from the exponential distribution is slightly higher than that from the KM method.
+
+# Question 3
+```{r}
+head(colon)
+
+colon <- colon %>%
+  filter(etype == "2")
+
+colon_Lev <- colon %>%
+  filter(rx == "Lev")
+
+colon_Lev5FU <- colon %>%
+  filter(rx == "Lev+5FU")
+
+colon_Obs <- colon %>%
+  filter(rx == "Obs")
+
+KM_est_Lev <- survfit(Surv(time, status) ~ 1, type = "kaplan-meier", conf.type ="log", data = colon_Lev)
+
+KM_est_Lev5FU <- survfit(Surv(time, status) ~ 1, type = "kaplan-meier", conf.type ="log", data = colon_Lev5FU)
+
+KM_est_Obs <- survfit(Surv(time, status) ~ 1, type = "kaplan-meier", conf.type ="log", data = colon_Obs)
+
+
+plot(KM_est_Lev, main = "KM estimate", xlab = "time", ylab = "Survival estimate", col = "red")
+lines(KM_est_Lev5FU, col= "blue")
+lines(KM_est_Obs, col= "green")
+legend(x = "bottomleft", legend=c("Lev(amisole)", "Lex(amisole)+5-FU", "Obs(ervation)"), col=c("red", "blue", "green"), lty=1:2, cex=0.8)
+mtext("p-value: 0.003", side = 4)
+
+
+logrank_test <- survdiff(Surv(time, status) ~ rx, data = colon)
+logrank_test
+
+```
+
+```{r}
+library(survminer)
+
+KM_est_colon <- survfit(Surv(time, status==0) ~ 1, type = "kaplan-meier", conf.type ="log", data = colon)
+  
+surv_median(KM_est_colon)
+```
+The estimated median follow-up time is 6.439 years.
